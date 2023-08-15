@@ -176,8 +176,7 @@ class FairseqModel(BaseFairseqModel):
             the decoder's output, typically of shape `(batch, tgt_len, vocab)`
         """
         encoder_out = self.encoder(src_tokens, src_lengths)
-        decoder_out = self.decoder(prev_output_tokens, encoder_out)
-        return decoder_out
+        return self.decoder(prev_output_tokens, encoder_out)
 
     def max_positions(self):
         """Maximum length supported by the model."""
@@ -316,8 +315,7 @@ class FairseqLMNMT(BaseFairseqModel):
         tgtlmoutput, _ = self.tgtlmdecoder(prev_output_tokens_lm)
         tgtlmoutput = F.softmax(tgtlmoutput, dim=-1)
         encoder_out = self.encoder(src_tokens, srclmoutput, src_lengths)
-        decoder_out = self.decoder(prev_output_tokens, tgtlmoutput, encoder_out)
-        return decoder_out
+        return self.decoder(prev_output_tokens, tgtlmoutput, encoder_out)
 
 
     def max_positions(self):

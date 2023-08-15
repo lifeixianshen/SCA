@@ -35,7 +35,9 @@ def main(args):
                          'must be specified for distributed training')
 
     args.distributed_rank = distributed_utils.distributed_init(args)
-    print('| initialized host {} as rank {}'.format(socket.gethostname(), args.distributed_rank))
+    print(
+        f'| initialized host {socket.gethostname()} as rank {args.distributed_rank}'
+    )
     single_process_main(args)
 
 

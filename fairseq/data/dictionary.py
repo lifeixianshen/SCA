@@ -29,9 +29,7 @@ class Dictionary(object):
         return self.indices == other.indices
 
     def __getitem__(self, idx):
-        if idx < len(self.symbols):
-            return self.symbols[idx]
-        return self.unk_word
+        return self.symbols[idx] if idx < len(self.symbols) else self.unk_word
 
     def __len__(self):
         """Returns the number of symbols in the dictionary"""
@@ -39,9 +37,7 @@ class Dictionary(object):
 
     def index(self, sym):
         """Returns the index of the specified symbol"""
-        if sym in self.indices:
-            return self.indices[sym]
-        return self.unk_index
+        return self.indices[sym] if sym in self.indices else self.unk_index
 
     def string(self, tensor, bpe_symbol=None, escape_unk=False):
         """Helper for converting a tensor of token indices to a string.
@@ -52,35 +48,29 @@ class Dictionary(object):
             return '\n'.join(self.string(t) for t in tensor)
 
         def token_string(i):
-            if i == self.unk():
-                return self.unk_string(escape_unk)
-            else:
-                return self[i]
+            return self.unk_string(escape_unk) if i == self.unk() else self[i]
 
         sent = ' '.join(token_string(i) for i in tensor if i != self.eos())
         if bpe_symbol is not None:
-            sent = (sent + ' ').replace(bpe_symbol, '').rstrip()
+            sent = f'{sent} '.replace(bpe_symbol, '').rstrip()
         return sent
 
     def unk_string(self, escape=False):
         """Return unknown string, optionally escaped as: <<unk>>"""
-        if escape:
-            return '<{}>'.format(self.unk_word)
-        else:
-            return self.unk_word
+        return f'<{self.unk_word}>' if escape else self.unk_word
 
     def add_symbol(self, word, n=1):
         """Adds a word to the dictionary"""
         if word in self.indices:
             idx = self.indices[word]
             self.count[idx] = self.count[idx] + n
-            return idx
         else:
             idx = len(self.symbols)
             self.indices[word] = idx
             self.symbols.append(word)
             self.count.append(n)
-            return idx
+
+        return idx
 
     def update(self, new_dict):
         """Updates counts from new dictionary."""
@@ -115,16 +105,15 @@ class Dictionary(object):
 
         c = Counter(dict(zip(self.symbols[self.nspecial:], self.count[self.nspecial:])))
         for symbol, count in c.most_common(nwords - self.nspecial):
-            if count >= threshold:
-                new_indices[symbol] = len(new_symbols)
-                new_symbols.append(symbol)
-                new_count.append(count)
-            else:
+            if count < threshold:
                 break
 
-        threshold_nwords = len(new_symbols)
+            new_indices[symbol] = len(new_symbols)
+            new_symbols.append(symbol)
+            new_count.append(count)
         if padding_factor > 1:
             i = 0
+            threshold_nwords = len(new_symbols)
             while threshold_nwords % padding_factor != 0:
                 symbol = 'madeupword{:04d}'.format(i)
                 new_indices[symbol] = len(new_symbols)
@@ -173,8 +162,9 @@ class Dictionary(object):
             except FileNotFoundError as fnfe:
                 raise fnfe
             except Exception:
-                raise Exception("Incorrect encoding detected in {}, please "
-                                "rebuild the dataset".format(f))
+                raise Exception(
+                    f"Incorrect encoding detected in {f}, please rebuild the dataset"
+                )
 
         d = cls()
         for line in f.readlines():
@@ -193,7 +183,7 @@ class Dictionary(object):
             with open(f, 'w', encoding='utf-8') as fd:
                 return self.save(fd)
         for symbol, count in zip(self.symbols[self.nspecial:], self.count[self.nspecial:]):
-            print('{} {}'.format(symbol, count), file=f)
+            print(f'{symbol} {count}', file=f)
 
     def dummy_sentence(self, length):
         t = torch.Tensor(length).uniform_(self.nspecial + 1, len(self)).long()
@@ -213,6 +203,4 @@ class TruncatedDictionary(object):
         return self.length
 
     def __getitem__(self, i):
-        if i < self.length:
-            return self.wrapped_dict[i]
-        return self.wrapped_dict.unk()
+        return self.wrapped_dict[i] if i < self.length else self.wrapped_dict.unk()

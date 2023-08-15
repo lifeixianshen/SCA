@@ -36,20 +36,19 @@ def collate_tokens(values, pad_idx, eos_idx, left_pad, move_eos_to_beginning=Fal
             dst[1:] = src[:-1]
         else:
             dst.copy_(src)
+
     def copy_tensor_lm(src, dst):
         assert dst.numel() == src.numel()
         assert src[-1] == eos_idx
         dst[0] = src[-2]
         dst[1] = src[-1]
         dst[2:] = src[:-2]
+
     for i, v in enumerate(values):
         copy_tensor(v, res[i][size - len(v):] if left_pad else res[i][:len(v)])
         if not left_pad and move_eos_to_beginning:
             copy_tensor_lm(v, res_lm[i][:len(v)])
-    if not left_pad and move_eos_to_beginning:
-        return res, res_lm
-    else:
-        return res
+    return (res, res_lm) if not left_pad and move_eos_to_beginning else res
 
 
 @contextlib.contextmanager
@@ -97,7 +96,7 @@ def filter_by_size(indices, size_fn, max_positions, raise_exception=False):
             if any elements are filtered. Default: ``False``
     """
     def check_size(idx):
-        if isinstance(max_positions, float) or isinstance(max_positions, int):
+        if isinstance(max_positions, (float, int)):
             return size_fn(idx) <= max_positions
         elif isinstance(max_positions, dict):
             idx_size = size_fn(idx)
@@ -114,14 +113,14 @@ def filter_by_size(indices, size_fn, max_positions, raise_exception=False):
     itr = collect_filtered(check_size, indices, ignored)
 
     for idx in itr:
-        if len(ignored) > 0 and raise_exception:
+        if ignored and raise_exception:
             raise Exception((
                 'Size of sample #{} is invalid (={}) since max_positions={}, '
                 'skip this example with --skip-invalid-size-inputs-valid-test'
             ).format(ignored[0], size_fn(ignored[0]), max_positions))
         yield idx
 
-    if len(ignored) > 0:
+    if ignored:
         print((
             '| WARNING: {} samples have invalid sizes and will be skipped, '
             'max_positions={}, first few sample ids={}'
@@ -154,13 +153,9 @@ def batch_by_size(
     batch = []
 
     def is_batch_full(num_tokens):
-        if len(batch) == 0:
+        if not batch:
             return False
-        if len(batch) == max_sentences:
-            return True
-        if num_tokens > max_tokens:
-            return True
-        return False
+        return True if len(batch) == max_sentences else num_tokens > max_tokens
 
     sample_len = 0
     sample_lens = []

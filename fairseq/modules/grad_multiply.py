@@ -12,8 +12,7 @@ class GradMultiply(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, scale):
         ctx.scale = scale
-        res = x.new(x)
-        return res
+        return x.new(x)
 
     @staticmethod
     def backward(ctx, grad):

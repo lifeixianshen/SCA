@@ -36,4 +36,4 @@ def register_lr_scheduler(name):
 for file in os.listdir(os.path.dirname(__file__)):
     if file.endswith('.py') and not file.startswith('_'):
         module = file[:file.find('.py')]
-        importlib.import_module('fairseq.optim.lr_scheduler.' + module)
+        importlib.import_module(f'fairseq.optim.lr_scheduler.{module}')

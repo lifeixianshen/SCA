@@ -71,7 +71,7 @@ def main(args):
     target = not args.only_source
 
     def train_path(lang):
-        return "{}{}".format(args.trainpref, ("." + lang) if lang else "")
+        return "{}{}".format(args.trainpref, f".{lang}" if lang else "")
 
     def file_name(prefix, lang):
         fname = prefix
@@ -139,7 +139,7 @@ def main(args):
             n_seq_tok[1] += worker_result["ntok"]
 
         input_file = "{}{}".format(
-            input_prefix, ("." + lang) if lang is not None else ""
+            input_prefix, f".{lang}" if lang is not None else ""
         )
         offsets = Tokenizer.find_offsets(input_file, num_workers)
         pool = None
@@ -252,7 +252,7 @@ def main(args):
                                     freq_map[srcidx][tgtidx] += 1
 
         align_dict = {}
-        for srcidx in freq_map.keys():
+        for srcidx in freq_map:
             align_dict[srcidx] = max(freq_map[srcidx], key=freq_map[srcidx].get)
 
         with open(
@@ -320,12 +320,12 @@ def get_offsets(input_file, num_workers):
 
 
 def merge_files(files, outpath):
-    ds = indexed_dataset.IndexedDatasetBuilder("{}.bin".format(outpath))
+    ds = indexed_dataset.IndexedDatasetBuilder(f"{outpath}.bin")
     for file in files:
         ds.merge_file_(file)
         os.remove(indexed_dataset.data_file_path(file))
         os.remove(indexed_dataset.index_file_path(file))
-    ds.finalize("{}.idx".format(outpath))
+    ds.finalize(f"{outpath}.idx")
 
 
 if __name__ == "__main__":

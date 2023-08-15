@@ -79,7 +79,7 @@ class CharacterTokenEmbedder(torch.nn.Module):
             word_to_char[i] = torch.LongTensor(char_idxs)
 
         if truncated > 0:
-            print('Truncated {} words longer than {} characters'.format(truncated, max_char_len))
+            print(f'Truncated {truncated} words longer than {max_char_len} characters')
 
         self.vocab = vocab
         self.word_to_char = word_to_char
@@ -145,7 +145,7 @@ class CharacterTokenEmbedder(torch.nn.Module):
 
         conv_result = []
 
-        for i, conv in enumerate(self.convolutions):
+        for conv in self.convolutions:
             x = conv(char_embs)
             x, _ = torch.max(x, -1)
             x = F.relu(x)

@@ -100,27 +100,26 @@ class AdaptiveSoftmax(nn.Module):
             dim = int(self.input_dim // self.factor ** (i + extra_denom))
 
             tied_emb, tied_proj = adaptive_inputs.weights_for_band(i + 1) \
-                if adaptive_inputs is not None else (None, None)
+                    if adaptive_inputs is not None else (None, None)
 
-            if tied_proj is not None:
-                if tie_proj:
-                    proj = TiedLinear(tied_proj, transpose=True)
-                else:
-                    proj = nn.Linear(tied_proj.size(0), tied_proj.size(1), bias=False)
-            else:
+            if tied_proj is None:
                 proj = nn.Linear(self.input_dim, dim, bias=False)
 
+            elif tie_proj:
+                proj = TiedLinear(tied_proj, transpose=True)
+            else:
+                proj = nn.Linear(tied_proj.size(0), tied_proj.size(1), bias=False)
             m = nn.Sequential(
                 proj,
                 nn.Dropout(self.dropout),
                 nn.Linear(dim, self.cutoff[i + 1] - self.cutoff[i], bias=False) \
-                    if tied_emb is None else TiedLinear(tied_emb, transpose=False)
+                        if tied_emb is None else TiedLinear(tied_emb, transpose=False)
             )
 
             self.tail.append(m)
 
     def upgrade_state_dict_named(self, state_dict, name):
-        version_name = name + '.version'
+        version_name = f'{name}.version'
         if version_name not in state_dict:
             self.buggy_offset = 1
             self._make_tail(False)

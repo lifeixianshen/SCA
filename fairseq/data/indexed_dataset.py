@@ -42,11 +42,11 @@ def code(dtype):
 
 
 def index_file_path(prefix_path):
-    return prefix_path + '.idx'
+    return f'{prefix_path}.idx'
 
 
 def data_file_path(prefix_path):
-    return prefix_path + '.bin'
+    return f'{prefix_path}.bin'
 
 
 class IndexedDataset(torch.utils.data.Dataset):
@@ -127,9 +127,9 @@ class IndexedCachedDataset(IndexedDataset):
         if all(i in self.cache_index for i in indices):
             return
         indices = sorted(set(indices))
-        total_size = 0
-        for i in indices:
-            total_size += self.data_offsets[i + 1] - self.data_offsets[i]
+        total_size = sum(
+            self.data_offsets[i + 1] - self.data_offsets[i] for i in indices
+        )
         self.cache = np.empty(total_size, dtype=self.dtype)
         ptx = 0
         self.cache_index.clear()
@@ -265,20 +265,18 @@ class IndexedDatasetBuilder(object):
 
         with open(data_file_path(another_file), 'rb') as f:
             while True:
-                data = f.read(1024)
-                if data:
+                if data := f.read(1024):
                     self.out_file.write(data)
                 else:
                     break
 
     def finalize(self, index_file):
         self.out_file.close()
-        index = open(index_file, 'wb')
-        index.write(b'TNTIDX\x00\x00')
-        index.write(struct.pack('<Q', 1))
-        index.write(struct.pack('<QQ', code(self.dtype), self.element_size))
-        index.write(struct.pack('<QQ', len(self.data_offsets) - 1, len(self.sizes)))
-        write_longs(index, self.dim_offsets)
-        write_longs(index, self.data_offsets)
-        write_longs(index, self.sizes)
-        index.close()
+        with open(index_file, 'wb') as index:
+            index.write(b'TNTIDX\x00\x00')
+            index.write(struct.pack('<Q', 1))
+            index.write(struct.pack('<QQ', code(self.dtype), self.element_size))
+            index.write(struct.pack('<QQ', len(self.data_offsets) - 1, len(self.sizes)))
+            write_longs(index, self.dim_offsets)
+            write_longs(index, self.data_offsets)
+            write_longs(index, self.sizes)

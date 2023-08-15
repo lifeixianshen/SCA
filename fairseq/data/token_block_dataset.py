@@ -73,7 +73,7 @@ class TokenBlockDataset(FairseqDataset):
                     self.slice_indices.append((curr, curr + sz))
                 curr += sz
         else:
-            raise ValueError('Invalid break_mode: ' + break_mode)
+            raise ValueError(f'Invalid break_mode: {break_mode}')
 
         self.sizes = np.array([e - s for s, e in self.slice_indices])
 
@@ -86,12 +86,12 @@ class TokenBlockDataset(FairseqDataset):
             # target is the sentence, for source, rotate item one token to the left (would start with eos)
             # past target is rotated to the left by 2 (padded if its first)
             if s == 0:
-                source = np.concatenate([[self.eos], self.cache[0:e - 1]])
-                past_target = np.concatenate([[self.pad, self.eos], self.cache[0:e - 2]])
+                source = np.concatenate([[self.eos], self.cache[:e - 1]])
+                past_target = np.concatenate([[self.pad, self.eos], self.cache[:e - 2]])
             else:
                 source = self.cache[s - 1: e - 1]
                 if s == 1:
-                    past_target = np.concatenate([[self.eos], self.cache[0:e - 2]])
+                    past_target = np.concatenate([[self.eos], self.cache[:e - 2]])
                 else:
                     past_target = self.cache[s - 2:e - 2]
 

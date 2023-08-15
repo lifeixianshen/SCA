@@ -40,9 +40,7 @@ class DynamicLossScaler:
     @staticmethod
     def has_overflow(grad_norm):
         # detect inf and nan
-        if grad_norm == float('inf') or grad_norm != grad_norm:
-            return True
-        return False
+        return grad_norm == float('inf') or grad_norm != grad_norm
 
 
 class FP16Optimizer(optim.FairseqOptimizer):
@@ -157,12 +155,10 @@ class FP16Optimizer(optim.FairseqOptimizer):
             if self.scaler.loss_scale <= self.args.min_loss_scale:
                 # Use FloatingPointError as an uncommon error that parent
                 # functions can safely catch to stop training.
-                raise FloatingPointError((
-                    'Minimum loss scale reached ({}). Your loss is probably exploding. '
-                    'Try lowering the learning rate, using gradient clipping or '
-                    'increasing the batch size.'
-                ).format(self.args.min_loss_scale))
-            raise OverflowError('setting loss scale to: ' + str(self.scaler.loss_scale))
+                raise FloatingPointError(
+                    f'Minimum loss scale reached ({self.args.min_loss_scale}). Your loss is probably exploding. Try lowering the learning rate, using gradient clipping or increasing the batch size.'
+                )
+            raise OverflowError(f'setting loss scale to: {str(self.scaler.loss_scale)}')
         return grad_norm
 
     def step(self, closure=None):

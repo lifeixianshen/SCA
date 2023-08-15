@@ -33,14 +33,16 @@ def main(args):
     # Load dataset splits
     task = tasks.setup_task(args)
     task.load_dataset(args.gen_subset)
-    print('| {} {} {} examples'.format(args.data, args.gen_subset, len(task.dataset(args.gen_subset))))
+    print(
+        f'| {args.data} {args.gen_subset} {len(task.dataset(args.gen_subset))} examples'
+    )
 
     # Set dictionaries
     src_dict = task.source_dictionary
     tgt_dict = task.target_dictionary
 
     # Load ensemble
-    print('| loading model(s) from {}'.format(args.path))
+    print(f'| loading model(s) from {args.path}')
     models, _ = utils.load_ensemble_for_inference(args.path.split(':'), task, model_arg_overrides=eval(args.model_overrides))
 
     # Optimize ensemble for generation
@@ -116,9 +118,9 @@ def main(args):
                     target_str = tgt_dict.string(target_tokens, args.remove_bpe, escape_unk=True)
 
             if not args.quiet:
-                print('S-{}\t{}'.format(sample_id, src_str))
+                print(f'S-{sample_id}\t{src_str}')
                 if has_target:
-                    print('T-{}\t{}'.format(sample_id, target_str))
+                    print(f'T-{sample_id}\t{target_str}')
 
             # Process top predictions
             for i, hypo in enumerate(hypos[:min(len(hypos), args.nbest)]):
@@ -132,7 +134,7 @@ def main(args):
                 )
 
                 if not args.quiet:
-                    print('H-{}\t{}\t{}'.format(sample_id, hypo['score'], hypo_str))
+                    print(f"H-{sample_id}\t{hypo['score']}\t{hypo_str}")
                     print('P-{}\t{}'.format(
                         sample_id,
                         ' '.join(map(
@@ -142,10 +144,9 @@ def main(args):
                     ))
 
                     if args.print_alignment:
-                        print('A-{}\t{}'.format(
-                            sample_id,
-                            ' '.join(map(lambda x: str(utils.item(x)), alignment))
-                        ))
+                        print(
+                            f"A-{sample_id}\t{' '.join(map(lambda x: str(utils.item(x)), alignment))}"
+                        )
 
                 # Score only the top hypothesis
                 if has_target and i == 0:
@@ -162,7 +163,9 @@ def main(args):
     print('| Translated {} sentences ({} tokens) in {:.1f}s ({:.2f} sentences/s, {:.2f} tokens/s)'.format(
         num_sentences, gen_timer.n, gen_timer.sum, num_sentences / gen_timer.sum, 1. / gen_timer.avg))
     if has_target:
-        print('| Generate {} with beam={}: {}'.format(args.gen_subset, args.beam, scorer.result_string()))
+        print(
+            f'| Generate {args.gen_subset} with beam={args.beam}: {scorer.result_string()}'
+        )
 
 
 if __name__ == '__main__':

@@ -50,7 +50,7 @@ class ConcatDataset(FairseqDataset):
 
     @property
     def supports_prefetch(self):
-        return all([d.supports_prefetch for d in self.datasets])
+        return all(d.supports_prefetch for d in self.datasets)
 
     def prefetch(self, indices):
         frm = 0

@@ -148,7 +148,7 @@ def load_ensemble_for_inference(filenames, task, model_arg_overrides=None):
     states = []
     for filename in filenames:
         if not os.path.exists(filename):
-            raise IOError('Model file not found: {}'.format(filename))
+            raise IOError(f'Model file not found: {filename}')
         state = load_checkpoint_to_cpu(filename)
         states.append(state)
 
@@ -211,7 +211,7 @@ def _get_full_incremental_state_key(module_instance, key):
         INCREMENTAL_STATE_INSTANCE_ID[module_name] += 1
         module_instance._fairseq_instance_id = INCREMENTAL_STATE_INSTANCE_ID[module_name]
 
-    return '{}.{}.{}'.format(module_name, module_instance._fairseq_instance_id, key)
+    return f'{module_name}.{module_instance._fairseq_instance_id}.{key}'
 
 
 def get_incremental_state(module, incremental_state, key):
@@ -250,7 +250,7 @@ def print_embed_overlap(embed_dict, vocab_dict):
     embed_keys = set(embed_dict.keys())
     vocab_keys = set(vocab_dict.symbols)
     overlap = len(embed_keys & vocab_keys)
-    print("| Found {}/{} types in embedding file.".format(overlap, len(vocab_dict)))
+    print(f"| Found {overlap}/{len(vocab_dict)} types in embedding file.")
 
 
 def parse_embedding(embed_path):
@@ -373,9 +373,7 @@ def convert_padding_direction(src_tokens, padding_idx, right_to_left=False, left
 def item(tensor):
     if hasattr(tensor, 'item'):
         return tensor.item()
-    if hasattr(tensor, '__getitem__'):
-        return tensor[0]
-    return tensor
+    return tensor[0] if hasattr(tensor, '__getitem__') else tensor
 
 
 def clip_grad_norm_(tensor, max_norm):
@@ -405,8 +403,8 @@ def checkpoint_paths(path, pattern=r'checkpoint(\d+)\.pt'):
     for i, f in enumerate(files):
         m = pt_regexp.fullmatch(f)
         if m is not None:
-            idx = int(m.group(1)) if len(m.groups()) > 0 else i
-            entries.append((idx, m.group(0)))
+            idx = int(m[1]) if len(m.groups()) > 0 else i
+            entries.append((idx, m[0]))
     return [os.path.join(path, x[1]) for x in sorted(entries, reverse=True)]
 
 
@@ -427,7 +425,7 @@ def resolve_max_positions(*args):
         if max_positions is None:
             max_positions = arg
         elif arg is not None:
-            if isinstance(arg, float) or isinstance(arg, int):
+            if isinstance(arg, (float, int)):
                 max_positions = min(max_positions, arg)
             else:
                 max_positions = tuple(

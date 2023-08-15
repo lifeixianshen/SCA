@@ -67,8 +67,7 @@ class LegacyDistributedDataParallel(nn.Module):
         self._register_grad_hook()
 
     def __getstate__(self):
-        attrs = copy.copy(self.__dict__)
-        return attrs
+        return copy.copy(self.__dict__)
 
     def __setstate__(self, state):
         super().__setstate__(state)
@@ -157,7 +156,7 @@ class LegacyDistributedDataParallel(nn.Module):
                     buffered_params.append(param)
                     offset += sz
 
-            if len(buffered_params) > 0:
+            if buffered_params:
                 all_reduce(buffered_params)
 
         # Now register the reduction hook on the parameters

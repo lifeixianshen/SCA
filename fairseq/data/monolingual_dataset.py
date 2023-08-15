@@ -85,7 +85,7 @@ class MonolingualDataset(FairseqDataset):
             target = []
 
             if self.add_eos_for_other_targets and (('self' in self.targets) or ('past' in self.targets)) \
-                    and source[-1] != self.vocab.eos():
+                        and source[-1] != self.vocab.eos():
                 # append eos at the end of source
                 source = torch.cat([source, source.new([self.vocab.eos()])])
 
@@ -97,14 +97,14 @@ class MonolingualDataset(FairseqDataset):
                     past_target = torch.cat([past_target.new([self.vocab.pad()]), past_target[1:], source[-2, None]])
 
             for t in self.targets:
-                if t == 'self':
-                    target.append(source)
-                elif t == 'future':
+                if t == 'future':
                     target.append(future_target)
                 elif t == 'past':
                     target.append(past_target)
+                elif t == 'self':
+                    target.append(source)
                 else:
-                    raise Exception('invalid target ' + t)
+                    raise Exception(f'invalid target {t}')
 
             if len(target) == 1:
                 target = target[0]
@@ -114,17 +114,17 @@ class MonolingualDataset(FairseqDataset):
         return source, self._filter_vocab(target)
 
     def _filter_vocab(self, target):
-        if len(self.tgt_vocab) != len(self.vocab):
-            def _filter(target):
-                mask = target.ge(len(self.tgt_vocab))
-                if mask.any():
-                    target[mask] = self.tgt_vocab.unk()
-                return target
+        if len(self.tgt_vocab) == len(self.vocab):
+            return target
+        def _filter(target):
+            mask = target.ge(len(self.tgt_vocab))
+            if mask.any():
+                target[mask] = self.tgt_vocab.unk()
+            return target
 
-            if isinstance(target, list):
-                return [_filter(t) for t in target]
-            return _filter(target)
-        return target
+        if isinstance(target, list):
+            return [_filter(t) for t in target]
+        return _filter(target)
 
     def collater(self, samples):
         """Merge a list of samples to form a mini-batch.
@@ -151,7 +151,7 @@ class MonolingualDataset(FairseqDataset):
 
     def get_dummy_batch(self, num_tokens, max_positions, tgt_len=128):
         """Return a dummy batch with a given number of tokens."""
-        if isinstance(max_positions, float) or isinstance(max_positions, int):
+        if isinstance(max_positions, (float, int)):
             tgt_len = min(tgt_len, max_positions)
         bsz = max(num_tokens // tgt_len, 1)
         target = self.vocab.dummy_sentence(tgt_len + 2)

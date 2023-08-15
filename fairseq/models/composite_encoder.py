@@ -37,10 +37,10 @@ class CompositeEncoder(FairseqEncoder):
             dict:
                 the outputs from each Encoder
         """
-        encoder_out = {}
-        for key in self.encoders:
-            encoder_out[key] = self.encoders[key](src_tokens, src_lengths)
-        return encoder_out
+        return {
+            key: self.encoders[key](src_tokens, src_lengths)
+            for key in self.encoders
+        }
 
     def reorder_encoder_out(self, encoder_out, new_order):
         """Reorder encoder output according to new_order."""
@@ -49,7 +49,7 @@ class CompositeEncoder(FairseqEncoder):
         return encoder_out
 
     def max_positions(self):
-        return min([self.encoders[key].max_positions() for key in self.encoders])
+        return min(self.encoders[key].max_positions() for key in self.encoders)
 
     def upgrade_state_dict(self, state_dict):
         for key in self.encoders:

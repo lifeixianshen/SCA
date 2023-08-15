@@ -81,11 +81,7 @@ class SingleHeadAttention(nn.Module):
             assert key_padding_mask.size(0) == bsz
             assert key_padding_mask.size(1) == src_len
 
-        if self.downsample:
-            size = bsz
-        else:
-            size = bsz * self.num_heads
-
+        size = bsz if self.downsample else bsz * self.num_heads
         k = key
         v = value
         q = query
@@ -108,7 +104,7 @@ class SingleHeadAttention(nn.Module):
         attn_weights = torch.bmm(q, k.transpose(1, 2))
         if mask_future_timesteps:
             assert query.size() == key.size(), \
-                'mask_future_timesteps only applies to self-attention'
+                    'mask_future_timesteps only applies to self-attention'
             attn_weights *= torch.tril(
                 attn_weights.data.new([1]).expand(tgt_len, tgt_len).clone(),
                 diagonal=-1,
@@ -167,15 +163,21 @@ class DownsampledMultiHeadAttention(nn.ModuleList):
         assert self.head_dim * num_heads == embed_dim
 
         if self.downsample:
-            attention_heads = []
-            for index in range(self.num_heads):
-                attention_heads.append(
-                    SingleHeadAttention(
-                        out_channels, self.embed_dim, self.head_dim, index,
-                        self.dropout, bias, self.project_input, self.gated,
-                        self.downsample, self.num_heads,
-                    )
+            attention_heads = [
+                SingleHeadAttention(
+                    out_channels,
+                    self.embed_dim,
+                    self.head_dim,
+                    index,
+                    self.dropout,
+                    bias,
+                    self.project_input,
+                    self.gated,
+                    self.downsample,
+                    self.num_heads,
                 )
+                for index in range(self.num_heads)
+            ]
             super().__init__(modules=attention_heads)
             self.out_proj = Linear(embed_dim, out_channels, bias=bias)
         else:

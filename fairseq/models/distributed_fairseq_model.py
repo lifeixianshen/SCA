@@ -59,7 +59,7 @@ def DistributedFairseqModel(args, model):
             buffer_size=2**28,
         )
     else:
-        raise ValueError('Unknown --ddp-backend: ' + args.ddp_backend)
+        raise ValueError(f'Unknown --ddp-backend: {args.ddp_backend}')
 
     class _DistributedFairseqModel(ddp_class):
         """Extend DistributedDataParallel to check for missing

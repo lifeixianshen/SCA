@@ -219,10 +219,7 @@ class TestDataNoising(unittest.TestCase):
             bpe_end_marker: str denoting the BPE end token. If this is not None, we
                 set the BPE cont token to None in the noising classes.
         """
-        bpe_cont_marker = None
-        if bpe_end_marker is None:
-            bpe_cont_marker = "@@"
-
+        bpe_cont_marker = "@@" if bpe_end_marker is None else None
         with data_utils.numpy_seed(1234):
             word_shuffle = noising.WordShuffle(
                 vocab, bpe_cont_marker=bpe_cont_marker, bpe_end_marker=bpe_end_marker
@@ -444,8 +441,7 @@ class TestDataNoising(unittest.TestCase):
             batch_size=2,
             collate_fn=language_pair_dataset.collater,
         )
-        denoising_batch_result = next(iter(dataloader))
-        return denoising_batch_result
+        return next(iter(dataloader))
 
     def test_noising_dataset_with_eos(self):
         src_dict, src_tokens, _ = self._get_test_data_with_bpe_cont_marker(
@@ -454,11 +450,10 @@ class TestDataNoising(unittest.TestCase):
 
         # Format data for src_dataset
         src_tokens = torch.t(src_tokens)
-        src_tokens_no_pad = []
-        for src_sentence in src_tokens:
-            src_tokens_no_pad.append(
-                utils.strip_pad(tensor=src_sentence, pad=src_dict.pad())
-            )
+        src_tokens_no_pad = [
+            utils.strip_pad(tensor=src_sentence, pad=src_dict.pad())
+            for src_sentence in src_tokens
+        ]
         denoising_batch_result = self._get_noising_dataset_batch(
             src_tokens_no_pad=src_tokens_no_pad, src_dict=src_dict
         )
@@ -491,11 +486,10 @@ class TestDataNoising(unittest.TestCase):
 
         # Format data for src_dataset
         src_tokens = torch.t(src_tokens)
-        src_tokens_no_pad = []
-        for src_sentence in src_tokens:
-            src_tokens_no_pad.append(
-                utils.strip_pad(tensor=src_sentence, pad=src_dict.pad())
-            )
+        src_tokens_no_pad = [
+            utils.strip_pad(tensor=src_sentence, pad=src_dict.pad())
+            for src_sentence in src_tokens
+        ]
         denoising_batch_result = self._get_noising_dataset_batch(
             src_tokens_no_pad=src_tokens_no_pad,
             src_dict=src_dict,

@@ -122,7 +122,7 @@ class WordDropout(WordNoising):
                 # insert at beginning in case the only token left is EOS
                 # EOS should be at end of list.
                 new_s.insert(0, words[np.random.randint(0, len(words))])
-            assert len(new_s) >= 1 and (
+            assert new_s and (
                 not has_eos  # Either don't have EOS at end or last token is EOS
                 or (len(new_s) >= 2 and new_s[-1] == self.dictionary.eos())
             ), "New sentence is invalid."

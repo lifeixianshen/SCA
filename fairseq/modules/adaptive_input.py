@@ -27,7 +27,7 @@ class AdaptiveInput(nn.Module):
         super().__init__()
 
         if vocab_size > cutoff[-1]:
-            cutoff = cutoff + [vocab_size]
+            cutoff += [vocab_size]
         else:
             assert vocab_size == cutoff[
                 -1], 'cannot specify cutoff larger than vocab size'

@@ -35,4 +35,4 @@ def register_lmoutschedule(name):
 for file in os.listdir(os.path.dirname(__file__)):
     if file.endswith('.py') and not file.startswith('_'):
         module = file[:file.find('.py')]
-        importlib.import_module('fairseq.lmoutschedule.' + module)
+        importlib.import_module(f'fairseq.lmoutschedule.{module}')

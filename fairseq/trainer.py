@@ -39,10 +39,7 @@ class Trainer(object):
 
         # copy model and criterion to current device
         self.criterion = criterion.cuda()
-        if args.fp16:
-            self._model = model.half().cuda()
-        else:
-            self._model = model.cuda()
+        self._model = model.half().cuda() if args.fp16 else model.cuda()
         # self.lm_scheduler = lmoutschedule.build_lmoutschedule(args, self._model.encoder, self._model.decoder)
         self._dummy_batch = dummy_batch
         self._oom_batch = oom_batch
@@ -172,16 +169,7 @@ class Trainer(object):
 
             try:
                 if self.args.distributed_world_size > 1:
-                    # Whenever *samples* contains more than one mini-batch, we
-                    # want to accumulate gradients locally and only call
-                    # all-reduce in the last backwards pass. Currently the
-                    # *need_reduction* flag is only supported by
-                    # LegacyDistributedDataParallel.
-                    if i < len(samples) - 1:
-                        self.model.accumulate_grads = True
-                    else:
-                        self.model.accumulate_grads = False
-
+                    self.model.accumulate_grads = i < len(samples) - 1
                 # forward and backward
                 loss, sample_size, logging_output = self.task.train_step(
                     sample, self.model, self.criterion, self.optimizer,
@@ -192,13 +180,12 @@ class Trainer(object):
                     logging_outputs.append(logging_output)
                     sample_sizes.append(sample_size)
             except RuntimeError as e:
-                if 'out of memory' in str(e):
-                    print('| WARNING: ran out of memory, skipping batch')
-                    ooms += 1
-                    self.zero_grad()
-                else:
+                if 'out of memory' not in str(e):
                     raise e
 
+                print('| WARNING: ran out of memory, skipping batch')
+                ooms += 1
+                self.zero_grad()
         if ooms > 0 and self._oom_batch is not None:
             self.handle_ooms(ooms)
 
@@ -225,11 +212,10 @@ class Trainer(object):
         )
         sample_size = self.task.grad_denom(sample_sizes, self.criterion)
 
-        if not all(k in logging_output for k in ['ntokens', 'nsentences']):
-            raise Exception((
-                'Please update the {}.aggregate_logging_outputs() method to '
-                'return ntokens and nsentences'
-            ).format(self.task.__class__.__name__))
+        if any(k not in logging_output for k in ['ntokens', 'nsentences']):
+            raise Exception(
+                f'Please update the {self.task.__class__.__name__}.aggregate_logging_outputs() method to return ntokens and nsentences'
+            )
 
         try:
             # normalize grads by sample size
@@ -261,7 +247,7 @@ class Trainer(object):
             if 'nll_loss' in logging_output:
                 self.meters['train_nll_loss'].update(logging_output.get('nll_loss', 0), ntokens)
         except OverflowError as e:
-            print('| WARNING: overflow detected, ' + str(e))
+            print(f'| WARNING: overflow detected, {str(e)}')
             self.zero_grad()
             logging_output = None
 
@@ -290,16 +276,15 @@ class Trainer(object):
                     sample, self.model, self.criterion
                 )
             except RuntimeError as e:
-                if 'out of memory' in str(e) and not raise_oom:
-                    print('| WARNING: ran out of memory, retrying batch')
-                    for p in self.model.parameters():
-                        if p.grad is not None:
-                            del p.grad  # free some memory
-                    torch.cuda.empty_cache()
-                    return self.valid_step(sample, raise_oom=True)
-                else:
+                if 'out of memory' not in str(e) or raise_oom:
                     raise e
 
+                print('| WARNING: ran out of memory, retrying batch')
+                for p in self.model.parameters():
+                    if p.grad is not None:
+                        del p.grad  # free some memory
+                torch.cuda.empty_cache()
+                return self.valid_step(sample, raise_oom=True)
             if ignore_results:
                 logging_output, sample_size = {}, 0
 
@@ -368,9 +353,7 @@ class Trainer(object):
 
     def get_meter(self, name):
         """Get a specific meter by name."""
-        if name not in self.meters:
-            return None
-        return self.meters[name]
+        return None if name not in self.meters else self.meters[name]
 
     def get_num_updates(self):
         """Get the number of parameters updates."""

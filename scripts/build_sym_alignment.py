@@ -59,10 +59,10 @@ def main():
 
     # create joined file
     joined_file = os.path.join(args.output_dir, 'text.joined')
-    with open(args.source_file, 'r') as src, open(args.target_file, 'r') as tgt:
+    with (open(args.source_file, 'r') as src, open(args.target_file, 'r') as tgt):
         with open(joined_file, 'w') as joined:
             for s, t in zip_longest(src, tgt):
-                print('{} ||| {}'.format(s.strip(), t.strip()), file=joined)
+                print(f'{s.strip()} ||| {t.strip()}', file=joined)
 
     bwd_align_file = os.path.join(args.output_dir, 'align.backward')
 

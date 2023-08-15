@@ -63,11 +63,7 @@ class TriangularSchedule(FairseqLRScheduler):
 
         lr_shrink = self.lr_shrink ** cycle
         max_lr = self.max_lr * lr_shrink
-        if self.shrink_min:
-            min_lr = self.min_lr * lr_shrink
-        else:
-            min_lr = self.min_lr
-
+        min_lr = self.min_lr * lr_shrink if self.shrink_min else self.min_lr
         x = abs(num_updates / self.stepsize - 2 * (cycle + 1) + 1)
         self.lr = min_lr + (max_lr - min_lr) * max(0, (1 - x))
 

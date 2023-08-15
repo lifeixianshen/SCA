@@ -35,7 +35,7 @@ def build_progress_bar(args, iterator, epoch=None, prefix=None, default='tqdm', 
     elif args.log_format == 'tqdm':
         bar = tqdm_progress_bar(iterator, epoch, prefix)
     else:
-        raise ValueError('Unknown log format: {}'.format(args.log_format))
+        raise ValueError(f'Unknown log format: {args.log_format}')
     return bar
 
 
@@ -48,7 +48,7 @@ class progress_bar(object):
         if epoch is not None:
             self.prefix += '| epoch {:03d}'.format(epoch)
         if prefix is not None:
-            self.prefix += ' | {}'.format(prefix)
+            self.prefix += f' | {prefix}'
 
     def __enter__(self):
         return self
@@ -68,12 +68,10 @@ class progress_bar(object):
         raise NotImplementedError
 
     def _str_commas(self, stats):
-        return ', '.join(key + '=' + stats[key].strip()
-                         for key in stats.keys())
+        return ', '.join(f'{key}={stats[key].strip()}' for key in stats.keys())
 
     def _str_pipes(self, stats):
-        return ' | '.join(key + ' ' + stats[key].strip()
-                          for key in stats.keys())
+        return ' | '.join(f'{key} {stats[key].strip()}' for key in stats.keys())
 
     def _format_stats(self, stats):
         postfix = OrderedDict(stats)
@@ -132,7 +130,7 @@ class json_progress_bar(progress_bar):
             # Meter: display both current and average value
             if isinstance(stats[key], AverageMeter):
                 postfix[key] = stats[key].val
-                postfix[key + '_avg'] = stats[key].avg
+                postfix[f'{key}_avg'] = stats[key].avg
             else:
                 postfix[key] = stats[key]
         return postfix
@@ -145,8 +143,7 @@ class noop_progress_bar(progress_bar):
         super().__init__(iterable, epoch, prefix)
 
     def __iter__(self):
-        for obj in self.iterable:
-            yield obj
+        yield from self.iterable
 
     def log(self, stats):
         """Log intermediate stats according to log_interval."""
@@ -182,7 +179,7 @@ class simple_progress_bar(progress_bar):
     def print(self, stats):
         """Print end-of-epoch stats."""
         postfix = self._str_pipes(self._format_stats(stats))
-        print('{} | {}'.format(self.prefix, postfix), flush=True)
+        print(f'{self.prefix} | {postfix}', flush=True)
 
 
 class tqdm_progress_bar(progress_bar):
@@ -202,4 +199,4 @@ class tqdm_progress_bar(progress_bar):
     def print(self, stats):
         """Print end-of-epoch stats."""
         postfix = self._str_pipes(self._format_stats(stats))
-        self.tqdm.write('{} | {}'.format(self.tqdm.desc, postfix))
+        self.tqdm.write(f'{self.tqdm.desc} | {postfix}')

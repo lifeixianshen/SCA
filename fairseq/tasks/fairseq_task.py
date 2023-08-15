@@ -53,7 +53,7 @@ class FairseqTask(object):
         """
         from fairseq.data import FairseqDataset
         if split not in self.datasets:
-            raise KeyError('Dataset not loaded: ' + split)
+            raise KeyError(f'Dataset not loaded: {split}')
         if not isinstance(self.datasets[split], FairseqDataset):
             raise TypeError('Datasets are expected to be of type FairseqDataset')
         return self.datasets[split]

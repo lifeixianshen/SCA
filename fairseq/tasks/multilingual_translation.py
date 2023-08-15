@@ -85,7 +85,7 @@ class MultilingualTranslationTask(FairseqTask):
                     'incompatible with --lang-pairs'
                 )
             training = False
-            args.lang_pairs = ['{}-{}'.format(args.source_lang, args.target_lang)]
+            args.lang_pairs = [f'{args.source_lang}-{args.target_lang}']
         else:
             training = True
             args.lang_pairs = args.lang_pairs.split(',')
@@ -96,12 +96,12 @@ class MultilingualTranslationTask(FairseqTask):
         # load dictionaries
         dicts = OrderedDict()
         for lang in langs:
-            dicts[lang] = Dictionary.load(os.path.join(args.data, 'dict.{}.txt'.format(lang)))
+            dicts[lang] = Dictionary.load(os.path.join(args.data, f'dict.{lang}.txt'))
             if len(dicts) > 0:
                 assert dicts[lang].pad() == dicts[langs[0]].pad()
                 assert dicts[lang].eos() == dicts[langs[0]].eos()
                 assert dicts[lang].unk() == dicts[langs[0]].unk()
-            print('| [{}] dictionary: {} types'.format(lang, len(dicts[lang])))
+            print(f'| [{lang}] dictionary: {len(dicts[lang])} types')
 
         return cls(args, dicts, training)
 
@@ -139,7 +139,7 @@ class MultilingualTranslationTask(FairseqTask):
             tgt_datasets[lang_pair] = indexed_dataset(prefix + tgt, self.dicts[tgt])
             print('| {} {} {} examples'.format(self.args.data, split, len(src_datasets[lang_pair])))
 
-        if len(src_datasets) == 0:
+        if not src_datasets:
             raise FileNotFoundError('Dataset not found: {} ({})'.format(split, self.args.data))
 
         def language_pair_dataset(lang_pair):

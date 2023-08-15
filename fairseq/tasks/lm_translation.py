@@ -127,13 +127,17 @@ class LMTranslationTask(FairseqTask):
             raise Exception('Could not infer language pair, please provide it explicitly')
 
         # load dictionaries
-        src_dict = Dictionary.load(os.path.join(args.data[0], 'dict.{}.txt'.format(args.source_lang)))
-        tgt_dict = Dictionary.load(os.path.join(args.data[0], 'dict.{}.txt'.format(args.target_lang)))
+        src_dict = Dictionary.load(
+            os.path.join(args.data[0], f'dict.{args.source_lang}.txt')
+        )
+        tgt_dict = Dictionary.load(
+            os.path.join(args.data[0], f'dict.{args.target_lang}.txt')
+        )
         assert src_dict.pad() == tgt_dict.pad()
         assert src_dict.eos() == tgt_dict.eos()
         assert src_dict.unk() == tgt_dict.unk()
-        print('| [{}] dictionary: {} types'.format(args.source_lang, len(src_dict)))
-        print('| [{}] dictionary: {} types'.format(args.target_lang, len(tgt_dict)))
+        print(f'| [{args.source_lang}] dictionary: {len(src_dict)} types')
+        print(f'| [{args.target_lang}] dictionary: {len(tgt_dict)} types')
 
         return cls(args, src_dict, tgt_dict)
 

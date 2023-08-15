@@ -201,10 +201,9 @@ class GroupedIterator(object):
     def __next__(self):
         chunk = []
         try:
-            for _ in range(self.chunk_size):
-                chunk.append(next(self.itr))
+            chunk.extend(next(self.itr) for _ in range(self.chunk_size))
         except StopIteration as e:
-            if len(chunk) == 0:
+            if not chunk:
                 raise e
         return chunk
 

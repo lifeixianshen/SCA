@@ -47,12 +47,9 @@ class TransformEosDataset(FairseqDataset):
         self.append_eos_to_tgt = append_eos_to_tgt
         self.remove_eos_from_tgt = remove_eos_from_tgt
 
-        # precompute how we should adjust the reported sizes
-        self._src_delta = 0
-        self._src_delta += 1 if append_eos_to_src else 0
+        self._src_delta = 0 + (1 if append_eos_to_src else 0)
         self._src_delta -= 1 if remove_eos_from_src else 0
-        self._tgt_delta = 0
-        self._tgt_delta += 1 if append_eos_to_tgt else 0
+        self._tgt_delta = 0 + (1 if append_eos_to_tgt else 0)
         self._tgt_delta -= 1 if remove_eos_from_tgt else 0
 
         self._checked_src = False

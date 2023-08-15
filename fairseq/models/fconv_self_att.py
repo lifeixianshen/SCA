@@ -126,9 +126,7 @@ class FConvModelSelfAtt(FairseqModel):
             pretrained=pretrained,
             trained_decoder=trained_decoder
         )
-        model = FConvModelSelfAtt(encoder, decoder, trained_encoder)
-
-        return model
+        return FConvModelSelfAtt(encoder, decoder, trained_encoder)
 
     @property
     def pretrained(self):
@@ -158,10 +156,7 @@ class FConvEncoder(FairseqEncoder):
         )
 
         def expand_bool_array(val):
-            if isinstance(val, bool):
-                # expand True into [True, True, ...] and do the same with False
-                return [val] * len(convolutions)
-            return val
+            return [val] * len(convolutions) if isinstance(val, bool) else val
 
         attention = expand_bool_array(attention)
 
@@ -265,10 +260,7 @@ class FConvDecoder(FairseqDecoder):
         in_channels = convolutions[0][0]
 
         def expand_bool_array(val):
-            if isinstance(val, bool):
-                # expand True into [True, True, ...] and do the same with False
-                return [val] * len(convolutions)
-            return val
+            return [val] * len(convolutions) if isinstance(val, bool) else val
 
         attention = expand_bool_array(attention)
         selfattention = expand_bool_array(selfattention)
@@ -411,20 +403,18 @@ class FConvDecoder(FairseqDecoder):
         if not self.pretrained:
             x = self.fc3(x)
 
-        # fusion gating
-        if self.pretrained:
-            trained_x, _ = self.pretrained_decoder.forward(prev_output_tokens, trained_encoder_out)
-            y = torch.cat([x, self.pretrained_outputs["out"]], dim=-1)
-            gate1 = self.gate1(y)
-            gate2 = self.gate2(y)
-            gated_x1 = gate1 * x
-            gated_x2 = gate2 * self.pretrained_outputs["out"]
-            fusion = torch.cat([gated_x1, gated_x2], dim=-1)
-            fusion = self.joining(fusion)
-            fusion_output = self.fc3(fusion)
-            return fusion_output, avg_attn_scores
-        else:
+        if not self.pretrained:
             return x, avg_attn_scores
+        trained_x, _ = self.pretrained_decoder.forward(prev_output_tokens, trained_encoder_out)
+        y = torch.cat([x, self.pretrained_outputs["out"]], dim=-1)
+        gate1 = self.gate1(y)
+        gate2 = self.gate2(y)
+        gated_x1 = gate1 * x
+        gated_x2 = gate2 * self.pretrained_outputs["out"]
+        fusion = torch.cat([gated_x1, gated_x2], dim=-1)
+        fusion = self.joining(fusion)
+        fusion_output = self.fc3(fusion)
+        return fusion_output, avg_attn_scores
 
     def max_positions(self):
         """Maximum output length supported by the decoder."""
@@ -439,8 +429,7 @@ class FConvDecoder(FairseqDecoder):
         encoder_a, encoder_b = encoder_out
         encoder_a = encoder_a.transpose(0, 1).contiguous()
         encoder_b = encoder_b.transpose(0, 1).contiguous()
-        result = (encoder_a, encoder_b)
-        return result
+        return encoder_a, encoder_b
 
 
 class SelfAttention(nn.Module):

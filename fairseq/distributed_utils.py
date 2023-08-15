@@ -50,8 +50,10 @@ def distributed_init(args):
         args.ddp_backend = 'no_c10d'
         _use_c10d[0] = False
 
-    print('| distributed init (rank {}): {}'.format(
-        args.distributed_rank, args.distributed_init_method), flush=True)
+    print(
+        f'| distributed init (rank {args.distributed_rank}): {args.distributed_init_method}',
+        flush=True,
+    )
 
     if _use_c10d[0]:
         init_fn = dist_c10d.init_process_group
@@ -84,10 +86,7 @@ def suppress_output(is_master):
 
 
 def get_rank():
-    if _use_c10d[0]:
-        return dist_c10d.get_rank()
-    else:
-        return dist_no_c10d.get_rank()
+    return dist_c10d.get_rank() if _use_c10d[0] else dist_no_c10d.get_rank()
 
 
 def get_world_size():
@@ -98,10 +97,7 @@ def get_world_size():
 
 
 def get_default_group():
-    if _use_c10d[0]:
-        return dist_c10d.group.WORLD
-    else:
-        return dist_no_c10d.group.WORLD
+    return dist_c10d.group.WORLD if _use_c10d[0] else dist_no_c10d.group.WORLD
 
 
 def all_reduce(tensor, group=None):
@@ -138,12 +134,11 @@ def all_gather_list(data, group=None, max_size=16384):
     enc = pickle.dumps(data)
     enc_size = len(enc)
     if enc_size + 2 > max_size:
-        raise ValueError('encoded data exceeds max_size: {}'.format(enc_size + 2))
+        raise ValueError(f'encoded data exceeds max_size: {enc_size + 2}')
     assert max_size < 255*256
 
     buffer_rank = buffer[rank * max_size : (rank + 1) * max_size]
-    buffer_rank[0] = enc_size // 255  # this encoding works for max_size < 65k
-    buffer_rank[1] = enc_size % 255
+    buffer_rank[0], buffer_rank[1] = divmod(enc_size, 255)
     buffer_rank[2:enc_size+2] = torch.ByteTensor(list(enc))
 
     all_reduce(buffer, group=group)

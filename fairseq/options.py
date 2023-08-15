@@ -115,10 +115,7 @@ def parse_args_and_arch(parser, input_args=None, parse_known=False):
     if hasattr(args, 'arch'):
         ARCH_CONFIG_REGISTRY[args.arch](args)
 
-    if parse_known:
-        return args, extra
-    else:
-        return args
+    return (args, extra) if parse_known else args
 
 
 def get_parser(desc, default_task='translation'):

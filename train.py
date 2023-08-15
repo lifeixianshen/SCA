@@ -41,8 +41,8 @@ def main(args):
     # Build model and criterion
     model = task.build_model(args)
     criterion = task.build_criterion(args)
-    print('| model {}, criterion {}'.format(args.arch, criterion.__class__.__name__))
-    print('| num. model params: {}'.format(sum(p.numel() for p in model.parameters())))
+    print(f'| model {args.arch}, criterion {criterion.__class__.__name__}')
+    print(f'| num. model params: {sum(p.numel() for p in model.parameters())}')
 
     # Make a dummy batch to (i) warm the caching allocator and (ii) as a
     # placeholder DistributedDataParallel when there's an uneven number of
@@ -56,11 +56,10 @@ def main(args):
 
     # Build trainer
     trainer = Trainer(args, task, model, criterion, dummy_batch, oom_batch)
-    print('| training on {} GPUs'.format(args.distributed_world_size))
-    print('| max tokens per GPU = {} and max sentences per GPU = {}'.format(
-        args.max_tokens,
-        args.max_sentences,
-    ))
+    print(f'| training on {args.distributed_world_size} GPUs')
+    print(
+        f'| max tokens per GPU = {args.max_tokens} and max sentences per GPU = {args.max_sentences}'
+    )
 
     # Initialize dataloader
     epoch_itr = task.get_batch_iterator(
@@ -220,9 +219,11 @@ def validate(args, trainer, task, epoch_itr, subsets):
             shard_id=args.distributed_rank,
         ).next_epoch_itr(shuffle=False)
         progress = progress_bar.build_progress_bar(
-            args, itr, epoch_itr.epoch,
-            prefix='valid on \'{}\' subset'.format(subset),
-            no_progress_bar='simple'
+            args,
+            itr,
+            epoch_itr.epoch,
+            prefix=f"valid on \'{subset}\' subset",
+            no_progress_bar='simple',
         )
 
         # reset validation loss meters
@@ -280,13 +281,15 @@ def save_checkpoint(args, trainer, epoch_itr, val_loss, nmt=False):
     updates = trainer.get_num_updates()
 
     checkpoint_conds = collections.OrderedDict()
-    checkpoint_conds['checkpoint{}.pt'.format(epoch)] = (
-            end_of_epoch and not args.no_epoch_checkpoints and
-            epoch % args.save_interval == 0
+    checkpoint_conds[f'checkpoint{epoch}.pt'] = (
+        end_of_epoch
+        and not args.no_epoch_checkpoints
+        and epoch % args.save_interval == 0
     )
-    checkpoint_conds['checkpoint_{}_{}.pt'.format(epoch, updates)] = (
-            not end_of_epoch and args.save_interval_updates > 0 and
-            updates % args.save_interval_updates == 0
+    checkpoint_conds[f'checkpoint_{epoch}_{updates}.pt'] = (
+        not end_of_epoch
+        and args.save_interval_updates > 0
+        and updates % args.save_interval_updates == 0
     )
     checkpoint_conds['checkpoint_best.pt'] = (
             val_loss is not None and
@@ -302,10 +305,13 @@ def save_checkpoint(args, trainer, epoch_itr, val_loss, nmt=False):
         'val_loss': val_loss,
     }
     if hasattr(save_checkpoint, 'best'):
-        extra_state.update({'best': save_checkpoint.best})
+        extra_state['best'] = save_checkpoint.best
 
-    checkpoints = [os.path.join(args.save_dir, fn) for fn, cond in checkpoint_conds.items() if cond]
-    if len(checkpoints) > 0:
+    if checkpoints := [
+        os.path.join(args.save_dir, fn)
+        for fn, cond in checkpoint_conds.items()
+        if cond
+    ]:
         for cp in checkpoints:
             trainer.save_checkpoint(cp, extra_state)
 
@@ -325,14 +331,20 @@ def load_checkpoint(args, trainer, epoch_itr):
         assert os.path.exists(checkpoint_path), 'You have specified --load-nmt flag, but there is no nmt model checkpoint.'
         print("Notice that your model will load from a NMT ckt,\nIf you do not want it to happen, please cancel the --load-nmt flag")
     if os.path.isfile(checkpoint_path):
-        extra_state = trainer.load_checkpoint(checkpoint_path, args.reset_optimizer, args.reset_lr_scheduler,
-                                              eval(args.optimizer_overrides), strict=False if args.load_nmt else True)
+        extra_state = trainer.load_checkpoint(
+            checkpoint_path,
+            args.reset_optimizer,
+            args.reset_lr_scheduler,
+            eval(args.optimizer_overrides),
+            strict=not args.load_nmt,
+        )
         if extra_state is not None:
             # replay train iterator to match checkpoint
             epoch_itr.load_state_dict(extra_state['train_iterator'])
 
-            print('| loaded checkpoint {} (epoch {} @ {} updates)'.format(
-                checkpoint_path, epoch_itr.epoch, trainer.get_num_updates()))
+            print(
+                f'| loaded checkpoint {checkpoint_path} (epoch {epoch_itr.epoch} @ {trainer.get_num_updates()} updates)'
+            )
 
             trainer.lr_step(epoch_itr.epoch)
             trainer.lr_step_update(trainer.get_num_updates())
@@ -364,18 +376,18 @@ def load_lm_state(args, model):
         from torch.serialization import default_restore_location
         state = torch.load(checkpoint_path, map_location=lambda s, l: default_restore_location(s, 'cpu'))
         def upgrade(obj):
-            if isinstance(obj, OrderedDict):
-                oldkeys = list(obj.keys())
-                for k in oldkeys:
-                    if k.startswith('decoder') and k != 'decoder':
-                        newkey = k.split('.', 1)[1]
-                    else:
-                        newkey = k
-                    obj[newkey] = upgrade(obj[k])
-                    if k.startswith('decoder'):
-                        del obj[k]
-            else:
+            if not isinstance(obj, OrderedDict):
                 return obj
+            oldkeys = list(obj.keys())
+            for k in oldkeys:
+                if k.startswith('decoder') and k != 'decoder':
+                    newkey = k.split('.', 1)[1]
+                else:
+                    newkey = k
+                obj[newkey] = upgrade(obj[k])
+                if k.startswith('decoder'):
+                    del obj[k]
+
         # state = _upgrade_state_dict(state)
         # model.upgrade_state_dict(state['model'])
         upgrade(state['model'])

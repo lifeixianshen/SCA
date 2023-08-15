@@ -242,8 +242,9 @@ class TransformerLanguageModel(FairseqLanguageModel):
         if args.tie_adaptive_weights:
             assert args.adaptive_input
             assert args.adaptive_input_factor == args.adaptive_softmax_factor
-            assert args.adaptive_softmax_cutoff == args.adaptive_input_cutoff, '{} != {}'.format(
-                args.adaptive_softmax_cutoff, args.adaptive_input_cutoff)
+            assert (
+                args.adaptive_softmax_cutoff == args.adaptive_input_cutoff
+            ), f'{args.adaptive_softmax_cutoff} != {args.adaptive_input_cutoff}'
             assert args.decoder_input_dim == args.decoder_output_dim
 
         decoder = TransformerDecoder(args, task.output_dictionary, embed_tokens, no_encoder_attn=True, final_norm=False)
@@ -477,8 +478,7 @@ class TransformerLmNmt(FairseqLMNMT):
             tgtlmoutput, _ = self.tgtlmdecoder(prev_output_tokens_lm)
             tgtlmoutput = F.softmax(tgtlmoutput, dim=-1)
         encoder_out = self.encoder(src_tokens, srclmoutput, src_lengths)
-        decoder_out = self.decoder(prev_output_tokens, tgtlmoutput, encoder_out)
-        return decoder_out
+        return self.decoder(prev_output_tokens, tgtlmoutput, encoder_out)
 
 
 
@@ -518,10 +518,9 @@ class TransformerEncoderModified(FairseqEncoder):
         ) if not args.no_token_positional_embeddings else None
 
         self.layers = nn.ModuleList([])
-        self.layers.extend([
-            TransformerEncoderLayer(args)
-            for i in range(args.encoder_layers)
-        ])
+        self.layers.extend(
+            [TransformerEncoderLayer(args) for _ in range(args.encoder_layers)]
+        )
         self.register_buffer('version', torch.Tensor([2]))
         self.normalize = args.encoder_normalize_before
         if self.normalize:
@@ -617,11 +616,11 @@ class TransformerEncoderModified(FairseqEncoder):
     def upgrade_state_dict_named(self, state_dict, name):
         """Upgrade a (possibly old) state dict for new versions of fairseq."""
         if isinstance(self.embed_positions, SinusoidalPositionalEmbedding):
-            weights_key = '{}.embed_positions.weights'.format(name)
+            weights_key = f'{name}.embed_positions.weights'
             if weights_key in state_dict:
                 del state_dict[weights_key]
-            state_dict['{}.embed_positions._float_tensor'.format(name)] = torch.FloatTensor(1)
-        version_key = '{}.version'.format(name)
+            state_dict[f'{name}.embed_positions._float_tensor'] = torch.FloatTensor(1)
+        version_key = f'{name}.version'
         if utils.item(state_dict.get(version_key, torch.Tensor([1]))[0]) < 2:
             # earlier checkpoints did not normalize after the stack of layers
             self.layer_norm = None
@@ -804,10 +803,10 @@ class TransformerDecoderModified(FairseqIncrementalDecoder):
     def upgrade_state_dict_named(self, state_dict, name):
         """Upgrade a (possibly old) state dict for new versions of fairseq."""
         if isinstance(self.embed_positions, SinusoidalPositionalEmbedding):
-            weights_key = '{}.embed_positions.weights'.format(name)
+            weights_key = f'{name}.embed_positions.weights'
             if weights_key in state_dict:
                 del state_dict[weights_key]
-            state_dict['{}.embed_positions._float_tensor'.format(name)] = torch.FloatTensor(1)
+            state_dict[f'{name}.embed_positions._float_tensor'] = torch.FloatTensor(1)
 
         for i in range(len(self.layers)):
             # update layer norms
@@ -818,15 +817,15 @@ class TransformerDecoderModified(FairseqIncrementalDecoder):
             }
             for old, new in layer_norm_map.items():
                 for m in ('weight', 'bias'):
-                    k = '{}.layers.{}.layer_norms.{}.{}'.format(name, i, old, m)
+                    k = f'{name}.layers.{i}.layer_norms.{old}.{m}'
                     if k in state_dict:
-                        state_dict['{}.layers.{}.{}.{}'.format(name, i, new, m)] = state_dict[k]
+                        state_dict[f'{name}.layers.{i}.{new}.{m}'] = state_dict[k]
                         del state_dict[k]
-        if utils.item(state_dict.get('{}.version'.format(name), torch.Tensor([1]))[0]) < 2:
+        if utils.item(state_dict.get(f'{name}.version', torch.Tensor([1]))[0]) < 2:
             # earlier checkpoints did not normalize after the stack of layers
             self.layer_norm = None
             self.normalize = False
-            state_dict['{}.version'.format(name)] = torch.Tensor([1])
+            state_dict[f'{name}.version'] = torch.Tensor([1])
 
         return state_dict
 
@@ -860,10 +859,9 @@ class TransformerEncoder(FairseqEncoder):
         ) if not args.no_token_positional_embeddings else None
 
         self.layers = nn.ModuleList([])
-        self.layers.extend([
-            TransformerEncoderLayer(args)
-            for i in range(args.encoder_layers)
-        ])
+        self.layers.extend(
+            [TransformerEncoderLayer(args) for _ in range(args.encoder_layers)]
+        )
         self.register_buffer('version', torch.Tensor([2]))
         self.normalize = args.encoder_normalize_before
         if self.normalize:
@@ -938,11 +936,11 @@ class TransformerEncoder(FairseqEncoder):
     def upgrade_state_dict_named(self, state_dict, name):
         """Upgrade a (possibly old) state dict for new versions of fairseq."""
         if isinstance(self.embed_positions, SinusoidalPositionalEmbedding):
-            weights_key = '{}.embed_positions.weights'.format(name)
+            weights_key = f'{name}.embed_positions.weights'
             if weights_key in state_dict:
                 del state_dict[weights_key]
-            state_dict['{}.embed_positions._float_tensor'.format(name)] = torch.FloatTensor(1)
-        version_key = '{}.version'.format(name)
+            state_dict[f'{name}.embed_positions._float_tensor'] = torch.FloatTensor(1)
+        version_key = f'{name}.version'
         if utils.item(state_dict.get(version_key, torch.Tensor([1]))[0]) < 2:
             # earlier checkpoints did not normalize after the stack of layers
             self.layer_norm = None
@@ -1108,10 +1106,10 @@ class TransformerDecoder(FairseqIncrementalDecoder):
     def upgrade_state_dict_named(self, state_dict, name):
         """Upgrade a (possibly old) state dict for new versions of fairseq."""
         if isinstance(self.embed_positions, SinusoidalPositionalEmbedding):
-            weights_key = '{}.embed_positions.weights'.format(name)
+            weights_key = f'{name}.embed_positions.weights'
             if weights_key in state_dict:
                 del state_dict[weights_key]
-            state_dict['{}.embed_positions._float_tensor'.format(name)] = torch.FloatTensor(1)
+            state_dict[f'{name}.embed_positions._float_tensor'] = torch.FloatTensor(1)
 
         for i in range(len(self.layers)):
             # update layer norms
@@ -1122,15 +1120,15 @@ class TransformerDecoder(FairseqIncrementalDecoder):
             }
             for old, new in layer_norm_map.items():
                 for m in ('weight', 'bias'):
-                    k = '{}.layers.{}.layer_norms.{}.{}'.format(name, i, old, m)
+                    k = f'{name}.layers.{i}.layer_norms.{old}.{m}'
                     if k in state_dict:
-                        state_dict['{}.layers.{}.{}.{}'.format(name, i, new, m)] = state_dict[k]
+                        state_dict[f'{name}.layers.{i}.{new}.{m}'] = state_dict[k]
                         del state_dict[k]
-        if utils.item(state_dict.get('{}.version'.format(name), torch.Tensor([1]))[0]) < 2:
+        if utils.item(state_dict.get(f'{name}.version', torch.Tensor([1]))[0]) < 2:
             # earlier checkpoints did not normalize after the stack of layers
             self.layer_norm = None
             self.normalize = False
-            state_dict['{}.version'.format(name)] = torch.Tensor([1])
+            state_dict[f'{name}.version'] = torch.Tensor([1])
 
         return state_dict
 
@@ -1162,7 +1160,7 @@ class TransformerEncoderLayer(nn.Module):
         self.normalize_before = args.encoder_normalize_before
         self.fc1 = Linear(self.embed_dim, args.encoder_ffn_embed_dim)
         self.fc2 = Linear(args.encoder_ffn_embed_dim, self.embed_dim)
-        self.layer_norms = nn.ModuleList([LayerNorm(self.embed_dim) for i in range(2)])
+        self.layer_norms = nn.ModuleList([LayerNorm(self.embed_dim) for _ in range(2)])
 
     def forward(self, x, encoder_padding_mask):
         """
@@ -1193,10 +1191,7 @@ class TransformerEncoderLayer(nn.Module):
 
     def maybe_layer_norm(self, i, x, before=False, after=False):
         assert before ^ after
-        if after ^ self.normalize_before:
-            return self.layer_norms[i](x)
-        else:
-            return x
+        return self.layer_norms[i](x) if after ^ self.normalize_before else x
 
 
 class TransformerDecoderLayer(nn.Module):
@@ -1322,10 +1317,7 @@ class TransformerDecoderLayer(nn.Module):
 
     def maybe_layer_norm(self, layer_norm, x, before=False, after=False):
         assert before ^ after
-        if after ^ self.normalize_before:
-            return layer_norm(x)
-        else:
-            return x
+        return layer_norm(x) if after ^ self.normalize_before else x
 
     def make_generation_fast_(self, need_attn=False, **kwargs):
         self.need_attn = need_attn
@@ -1339,8 +1331,7 @@ def Embedding(num_embeddings, embedding_dim, padding_idx):
 
 
 def LayerNorm(embedding_dim):
-    m = nn.LayerNorm(embedding_dim)
-    return m
+    return nn.LayerNorm(embedding_dim)
 
 
 def Linear(in_features, out_features, bias=True):

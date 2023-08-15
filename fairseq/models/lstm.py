@@ -319,8 +319,9 @@ class LSTMDecoder(FairseqIncrementalDecoder):
             self.embed_tokens = pretrained_embed
 
         self.encoder_output_units = encoder_output_units
-        assert encoder_output_units == hidden_size, \
-            'encoder_output_units ({}) != hidden_size ({})'.format(encoder_output_units, hidden_size)
+        assert (
+            encoder_output_units == hidden_size
+        ), f'encoder_output_units ({encoder_output_units}) != hidden_size ({hidden_size})'
         # TODO another Linear layer if not equal
 
         self.layers = nn.ModuleList([

@@ -42,14 +42,12 @@ class Tokenizer:
             f.seek(offset)
             if offset > 0:
                 safe_readline(f) # drop first incomplete line
-            line = f.readline()
-            while line:
+            while line := f.readline():
                 for word in tokenize(line):
-                    counter.update([word])
+                    counter |= [word]
                 counter.update([eos_word])
                 if f.tell() > end:
                     break
-                line = f.readline()
         return counter
 
     @staticmethod
@@ -125,10 +123,7 @@ class Tokenizer:
         ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
 
         for i, word in enumerate(words):
-            if add_if_not_exist:
-                idx = dict.add_symbol(word)
-            else:
-                idx = dict.index(word)
+            idx = dict.add_symbol(word) if add_if_not_exist else dict.index(word)
             if consumer is not None:
                 consumer(word, idx)
             ids[i] = idx

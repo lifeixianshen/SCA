@@ -215,17 +215,11 @@ class FConvEncoder(FairseqEncoder):
         self.residuals = []
 
         layer_in_channels = [in_channels]
-        for i, (out_channels, kernel_size, residual) in enumerate(convolutions):
-            if residual == 0:
-                residual_dim = out_channels
-            else:
-                residual_dim = layer_in_channels[-residual]
+        for out_channels, kernel_size, residual in convolutions:
+            residual_dim = out_channels if residual == 0 else layer_in_channels[-residual]
             self.projections.append(Linear(residual_dim, out_channels)
                                     if residual_dim != out_channels else None)
-            if kernel_size % 2 == 1:
-                padding = kernel_size // 2
-            else:
-                padding = 0
+            padding = kernel_size // 2 if kernel_size % 2 == 1 else 0
             self.convolutions.append(
                 ConvTBC(in_channels, out_channels * 2, kernel_size,
                         dropout=dropout, padding=padding)
@@ -282,14 +276,12 @@ class FConvEncoder(FairseqEncoder):
                 x = x.masked_fill(encoder_padding_mask.unsqueeze(-1), 0)
 
             x = F.dropout(x, p=self.dropout, training=self.training)
-            if conv.kernel_size[0] % 2 == 1:
-                # padding is implicit in the conv
-                x = conv(x)
-            else:
+            if conv.kernel_size[0] % 2 != 1:
                 padding_l = (conv.kernel_size[0] - 1) // 2
                 padding_r = conv.kernel_size[0] // 2
                 x = F.pad(x, (0, 0, 0, 0, padding_l, padding_r))
-                x = conv(x)
+            # padding is implicit in the conv
+            x = conv(x)
             x = F.glu(x, dim=2)
 
             if residual is not None:
@@ -431,10 +423,7 @@ class FConvDecoder(FairseqIncrementalDecoder):
 
         layer_in_channels = [in_channels]
         for i, (out_channels, kernel_size, residual) in enumerate(convolutions):
-            if residual == 0:
-                residual_dim = out_channels
-            else:
-                residual_dim = layer_in_channels[-residual]
+            residual_dim = out_channels if residual == 0 else layer_in_channels[-residual]
             self.projections.append(Linear(residual_dim, out_channels)
                                     if residual_dim != out_channels else None)
             self.convolutions.append(
@@ -457,9 +446,9 @@ class FConvDecoder(FairseqIncrementalDecoder):
         else:
             self.fc2 = Linear(in_channels, out_embed_dim)
             if share_embed:
-                assert out_embed_dim == embed_dim, \
-                    "Shared embed weights implies same dimensions " \
-                    " out_embed_dim={} vs embed_dim={}".format(out_embed_dim, embed_dim)
+                assert (
+                    out_embed_dim == embed_dim
+                ), f"Shared embed weights implies same dimensions  out_embed_dim={out_embed_dim} vs embed_dim={embed_dim}"
                 self.fc3 = nn.Linear(out_embed_dim, num_embeddings)
                 self.fc3.weight = self.embed_tokens.weight
             else:
@@ -607,7 +596,9 @@ def extend_conv_spec(convolutions):
         elif len(spec) == 2:
             extended.append(spec + (1,))
         else:
-            raise Exception('invalid number of parameters in convolution spec ' + str(spec) + '. expected 2 or 3')
+            raise Exception(
+                f'invalid number of parameters in convolution spec {str(spec)}. expected 2 or 3'
+            )
     return tuple(extended)
 
 
@@ -664,8 +655,7 @@ def base_lm_architecture(args):
 
 @register_model_architecture('fconv_lm', 'fconv_lm_dauphin_wikitext103')
 def fconv_lm_dauphin_wikitext103(args):
-    layers = '[(850, 6)] * 3'
-    layers += ' + [(850, 1)] * 1'
+    layers = '[(850, 6)] * 3' + ' + [(850, 1)] * 1'
     layers += ' + [(850, 5)] * 4'
     layers += ' + [(850, 1)] * 1'
     layers += ' + [(850, 4)] * 3'
@@ -680,8 +670,7 @@ def fconv_lm_dauphin_wikitext103(args):
 
 @register_model_architecture('fconv_lm', 'fconv_lm_dauphin_gbw')
 def fconv_lm_dauphin_gbw(args):
-    layers = '[(512, 5)]'
-    layers += ' + [(128, 1, 0), (128, 5, 0), (512, 1, 3)] * 3'
+    layers = '[(512, 5)]' + ' + [(128, 1, 0), (128, 5, 0), (512, 1, 3)] * 3'
     layers += ' + [(512, 1, 0), (512, 5, 0), (1024, 1, 3)] * 3'
     layers += ' + [(1024, 1, 0), (1024, 5, 0), (2048, 1, 3)] * 6'
     layers += ' + [(1024, 1, 0), (1024, 5, 0), (4096, 1, 3)]'
@@ -724,8 +713,7 @@ def fconv_wmt_en_ro(args):
 
 @register_model_architecture('fconv', 'fconv_wmt_en_de')
 def fconv_wmt_en_de(args):
-    convs = '[(512, 3)] * 9'  # first 9 layers have 512 units
-    convs += ' + [(1024, 3)] * 4'  # next 4 layers have 1024 units
+    convs = '[(512, 3)] * 9' + ' + [(1024, 3)] * 4'
     convs += ' + [(2048, 1)] * 2'  # final 2 layers use 1x1 convolutions
 
     args.encoder_embed_dim = getattr(args, 'encoder_embed_dim', 768)
@@ -738,8 +726,7 @@ def fconv_wmt_en_de(args):
 
 @register_model_architecture('fconv', 'fconv_wmt_en_fr')
 def fconv_wmt_en_fr(args):
-    convs = '[(512, 3)] * 6'  # first 6 layers have 512 units
-    convs += ' + [(768, 3)] * 4'  # next 4 layers have 768 units
+    convs = '[(512, 3)] * 6' + ' + [(768, 3)] * 4'
     convs += ' + [(1024, 3)] * 3'  # next 3 layers have 1024 units
     convs += ' + [(2048, 1)] * 1'  # next 1 layer uses 1x1 convolutions
     convs += ' + [(4096, 1)] * 1'  # final 1 layer uses 1x1 convolutions

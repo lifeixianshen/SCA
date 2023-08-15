@@ -51,11 +51,9 @@ class Scorer(object):
 
     def add(self, ref, pred):
         if not isinstance(ref, torch.IntTensor):
-            raise TypeError('ref must be a torch.IntTensor (got {})'
-                            .format(type(ref)))
+            raise TypeError(f'ref must be a torch.IntTensor (got {type(ref)})')
         if not isinstance(pred, torch.IntTensor):
-            raise TypeError('pred must be a torch.IntTensor(got {})'
-                            .format(type(pred)))
+            raise TypeError(f'pred must be a torch.IntTensor(got {type(pred)})')
 
         # don't match unknown words
         rref = ref.clone()

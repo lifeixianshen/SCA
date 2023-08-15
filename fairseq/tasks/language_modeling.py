@@ -92,7 +92,7 @@ class LanguageModelingTask(FairseqTask):
         output_dictionary = None
         if args.data:
             dictionary = Dictionary.load(os.path.join(args.data, 'dict.txt'))
-            print('| dictionary: {} types'.format(len(dictionary)))
+            print(f'| dictionary: {len(dictionary)} types')
             output_dictionary = dictionary
             if args.output_dictionary_size >= 0:
                 output_dictionary = TruncatedDictionary(dictionary, args.output_dictionary_size)
@@ -108,7 +108,7 @@ class LanguageModelingTask(FairseqTask):
             targets.append('future')
         if getattr(args, 'past_target', False):
             targets.append('past')
-        if len(targets) == 0:
+        if not targets:
             # standard language modeling
             targets = ['future']
 
@@ -119,7 +119,7 @@ class LanguageModelingTask(FairseqTask):
 
         for target in self.targets:
             if target not in model.supported_targets:
-                raise ValueError('Unsupported language modeling target: {}'.format(target))
+                raise ValueError(f'Unsupported language modeling target: {target}')
 
         return model
 
@@ -140,11 +140,10 @@ class LanguageModelingTask(FairseqTask):
                 ds = IndexedRawTextDataset(path, self.dictionary)
             elif not self.args.raw_text and IndexedDataset.exists(path):
                 ds = IndexedDataset(path, fix_lua_indexing=True)
+            elif k > 0:
+                break
             else:
-                if k > 0:
-                    break
-                else:
-                    raise FileNotFoundError('Dataset not found: {} ({})'.format(split, self.args.data))
+                raise FileNotFoundError(f'Dataset not found: {split} ({self.args.data})')
 
             loaded_datasets.append(
                 TokenBlockDataset(
@@ -152,7 +151,7 @@ class LanguageModelingTask(FairseqTask):
                     break_mode=self.args.sample_break_mode, include_targets=True,
                 ))
 
-            print('| {} {} {} examples'.format(self.args.data, split_k, len(loaded_datasets[-1])))
+            print(f'| {self.args.data} {split_k} {len(loaded_datasets[-1])} examples')
 
             if not combine:
                 break
